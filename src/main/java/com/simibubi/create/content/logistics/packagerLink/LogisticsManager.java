@@ -112,7 +112,7 @@ public class LogisticsManager {
 
 		// Group links by InventoryIdentifier and randomly select one from each group
 		Map<InventoryIdentifier, List<LogisticallyLinkedBehaviour>> linksByInventory = new HashMap<>();
-		List<LogisticallyLinkedBehaviour> availableLinks = new ArrayList<>();
+		List<List<LogisticallyLinkedBehaviour>> noIdGroups = new ArrayList<>();
 
 		// Group links by their inventory identifier
 		for (LogisticallyLinkedBehaviour link : allAvailableLinks) {
@@ -120,15 +120,32 @@ public class LogisticsManager {
 			if (inventoryId != null) {
 				linksByInventory.computeIfAbsent(inventoryId, k -> new ArrayList<>()).add(link);
 			} else {
-				// Links without inventory identifier are added directly
-				availableLinks.add(link);
+				// Links without inventory identifier become their own singleton group
+				List<LogisticallyLinkedBehaviour> listGroup = new ArrayList<>();
+				listGroup.add(link);
+				noIdGroups.add(listGroup);
 			}
 		}
 
+		List<List<LogisticallyLinkedBehaviour>> availableLinkGroups = new ArrayList<>();
+		availableLinkGroups.addAll(linksByInventory.values());
+		availableLinkGroups.addAll(noIdGroups);
+
+		List<LogisticallyLinkedBehaviour> availableLinks = new ArrayList<>();
+
 		// Randomly select one link from each inventory group
-		for (List<LogisticallyLinkedBehaviour> linkGroup : linksByInventory.values()) {
-			if (!linkGroup.isEmpty()) {
-				LogisticallyLinkedBehaviour selectedLink = linkGroup.get(r.nextInt(linkGroup.size()));
+		for (List<LogisticallyLinkedBehaviour> linkGroup : availableLinkGroups) {
+			if (linkGroup.size() == 1) {
+				availableLinks.add(linkGroup.get(0));
+			} else {
+				int priority = linkGroup.get(0).redstonePower;
+				List<LogisticallyLinkedBehaviour> priorityLinkGroup = new ArrayList<>();
+				for (LogisticallyLinkedBehaviour link : linkGroup) {
+					if (link.redstonePower == priority) {
+						priorityLinkGroup.add(link);
+					}
+				}
+				LogisticallyLinkedBehaviour selectedLink = priorityLinkGroup.get(r.nextInt(priorityLinkGroup.size()));
 				availableLinks.add(selectedLink);
 			}
 		}
